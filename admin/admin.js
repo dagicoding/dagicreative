@@ -76,6 +76,7 @@ function showToast(message, type = "success") {
 }
 
 // ============================
+// ============================
 // CRUD: Works
 // ============================
 const worksList = document.getElementById("works-list");
@@ -85,15 +86,6 @@ document.getElementById("workForm").addEventListener("submit", async (e) => {
   const description = document.getElementById("workDesc").value.trim();
   const imageUrl = document.getElementById("workImage").value.trim() || "";
   const videoUrl = document.getElementById("workVideo").value.trim() || "";
-
-  // ✅ Validate video link
-  if (
-    videoUrl &&
-    !(videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") || videoUrl.includes("drive.google.com"))
-  ) {
-    showToast("Only YouTube or Google Drive links are allowed!", "error");
-    return;
-  }
 
   await addDoc(collection(db, "works"), { 
     title, 
@@ -107,26 +99,36 @@ document.getElementById("workForm").addEventListener("submit", async (e) => {
   e.target.reset();
 });
 
-// ✅ Helper: YouTube/Drive embed converter
+// Helper: get autoplay embed URL
 function getEmbedUrl(url) {
   if (!url) return null;
 
+  // YouTube short links
   if (url.includes("youtu.be/")) {
     const id = url.split("youtu.be/")[1].split('?')[0];
-    return `https://www.youtube.com/embed/${id}`;
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1`;
   }
+
+  // YouTube normal links
   if (url.includes("youtube.com/watch")) {
     const id = new URL(url).searchParams.get("v");
-    return id ? `https://www.youtube.com/embed/${id}` : null;
+    return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1` : null;
   }
-  if (url.includes("youtube.com/embed")) return url;
 
+  // YouTube embed (append autoplay params)
+  if (url.includes("youtube.com/embed")) {
+    return url.includes("?") ? `${url}&autoplay=1&mute=1` : `${url}?autoplay=1&mute=1`;
+  }
+
+  // Google Drive links
   if (url.includes("drive.google.com/file/d/")) {
     const match = url.match(/\/file\/d\/([^/]+)\//);
-    if (match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+    if (match && match[1]) {
+      return `https://drive.google.com/file/d/${match[1]}/preview?autoplay=1&mute=1`;
+    }
   }
 
-  return null;
+  return null; // ❌ not recognized
 }
 
 onSnapshot(collection(db, "works"), (snapshot) => {
@@ -140,21 +142,32 @@ onSnapshot(collection(db, "works"), (snapshot) => {
     let mediaHtml = "";
     if (work.videoUrl) {
       const embedUrl = getEmbedUrl(work.videoUrl);
+
       if (embedUrl) {
         mediaHtml = `
           <div class="ratio ratio-16x9 mb-2">
-            <iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <iframe src="${embedUrl}" 
+              frameborder="0" 
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
+              allowfullscreen>
+            </iframe>
           </div>
         `;
       } else {
-        mediaHtml = `<a href="${work.videoUrl}" target="_blank" class="text-warning">Open Video</a>`;
+        mediaHtml = `
+          <div class="bg-dark text-center py-4 mb-2">
+            <p class="text-white mb-1">Video Link:</p>
+            <a href="${work.videoUrl}" target="_blank" class="text-warning">${work.videoUrl}</a>
+          </div>
+        `;
       }
     } else if (work.imageUrl) {
-      mediaHtml = `<img src="${work.imageUrl}" class="card-img-top mb-2" alt="${work.title}" style="height:200px;object-fit:cover;">`;
+      mediaHtml = `<img src="${work.imageUrl}" class="card-img-top mb-2" alt="${work.title}" style="height: 200px; object-fit: cover;">`;
     } else {
       mediaHtml = `<div class="bg-secondary text-center text-white py-5 mb-2">No Media</div>`;
     }
 
+    // Escape quotes for edit function
     const safeTitle = work.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     const safeDescription = work.description.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     const safeImageUrl = (work.imageUrl || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -188,7 +201,11 @@ window.deleteWork = async function (id) {
   }
 };
 
+// ============================
+// Edit Work
+// ============================
 window.editWork = function (id, title, description, imageUrl, videoUrl) {
+  // Fill the form with existing values
   document.getElementById("workTitle").value = title.replace(/\\'/g, "'").replace(/&quot;/g, '"');
   document.getElementById("workDesc").value = description.replace(/\\'/g, "'").replace(/&quot;/g, '"');
   document.getElementById("workImage").value = imageUrl.replace(/\\'/g, "'").replace(/&quot;/g, '"');
@@ -197,37 +214,42 @@ window.editWork = function (id, title, description, imageUrl, videoUrl) {
   const form = document.getElementById("workForm");
   form.querySelector("button").innerHTML = `<i class="bi bi-save"></i> Save Changes`;
 
+  // Remove existing listener and attach new one
   const newForm = form.cloneNode(true);
   form.parentNode.replaceChild(newForm, form);
 
   newForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const updatedTitle = document.getElementById("workTitle").value.trim();
-    const updatedDesc = document.getElementById("workDesc").value.trim();
-    const updatedImage = document.getElementById("workImage").value.trim() || "";
-    const updatedVideo = document.getElementById("workVideo").value.trim() || "";
-
-    if (
-      updatedVideo &&
-      !(updatedVideo.includes("youtube.com") || updatedVideo.includes("youtu.be") || updatedVideo.includes("drive.google.com"))
-    ) {
-      showToast("Only YouTube or Google Drive links are allowed!", "error");
-      return;
-    }
-
     await updateDoc(doc(db, "works", id), {
-      title: updatedTitle,
-      description: updatedDesc,
-      imageUrl: updatedImage,
-      videoUrl: updatedVideo,
+      title: document.getElementById("workTitle").value.trim(),
+      description: document.getElementById("workDesc").value.trim(),
+      imageUrl: document.getElementById("workImage").value.trim(),
+      videoUrl: document.getElementById("workVideo").value.trim(),
       updatedAt: new Date()
     });
-
     showToast("Work updated successfully!", "success");
+
     newForm.reset();
     newForm.querySelector("button").innerHTML = `➕ Add Work`;
-  });
+
+    // restore the add handler
+    newForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = document.getElementById("workTitle").value.trim();
+      const description = document.getElementById("workDesc").value.trim();
+      const imageUrl = document.getElementById("workImage").value.trim() || "";
+      const videoUrl = document.getElementById("workVideo").value.trim() || "";
+
+      await addDoc(collection(db, "works"), { 
+        title, description, imageUrl, videoUrl, createdAt: new Date() 
+      });
+
+      showToast("Work added successfully!");
+      e.target.reset();
+    }, { once: true });
+  }, { once: true });
 };
+
 
 // ============================
 // CRUD: Packages

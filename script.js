@@ -83,40 +83,49 @@ onSnapshot(doc(db, "hero", "main"), (docSnap) => {
 // ============================
 const worksContainer = document.querySelector(".works-container");
 
-// Helper function to convert video URLs to embed format
+// Helper function to convert video URLs to autoplay embed format
 function getEmbedUrl(url) {
   if (!url) return null;
 
   // YouTube short links
   if (url.includes("youtu.be/")) {
     const id = url.split("youtu.be/")[1].split('?')[0];
-    return `https://www.youtube.com/embed/${id}`;
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1`;
   }
 
   // YouTube normal links
   if (url.includes("youtube.com/watch")) {
     const id = new URL(url).searchParams.get("v");
-    return id ? `https://www.youtube.com/embed/${id}` : url;
+    return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1` : null;
   }
 
-  // YouTube embed links (already correct)
+  // YouTube embed links
   if (url.includes("youtube.com/embed")) {
-    return url;
+    return url.includes("?") ? `${url}&autoplay=1&mute=1` : `${url}?autoplay=1&mute=1`;
+  }
+
+  // Google Drive links
+  if (url.includes("drive.google.com/file/d/")) {
+    const match = url.match(/\/file\/d\/([^/]+)\//);
+    if (match && match[1]) {
+      return `https://drive.google.com/file/d/${match[1]}/preview?autoplay=1&mute=1`;
+    }
   }
 
   // Vimeo
   if (url.includes("vimeo.com/")) {
     const id = url.split("vimeo.com/")[1].split('?')[0];
-    return `https://player.vimeo.com/video/${id}`;
+    return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1`;
   }
 
-  // Vimeo player links (already correct)
+  // Vimeo embed (already correct)
   if (url.includes("player.vimeo.com/video")) {
-    return url;
+    return url.includes("?") ? `${url}&autoplay=1&muted=1` : `${url}?autoplay=1&muted=1`;
   }
 
-  return url; // Return as-is if not a recognized video URL
+  return null; // not recognized
 }
+
 
 onSnapshot(collection(db, "works"), (snapshot) => {
   worksContainer.innerHTML = "";
@@ -128,19 +137,23 @@ onSnapshot(collection(db, "works"), (snapshot) => {
 
   snapshot.forEach((doc) => {
     const work = doc.data();
-    
+
     let mediaHtml = "";
     if (work.videoUrl) {
       const embedUrl = getEmbedUrl(work.videoUrl);
-      
-      if (embedUrl && (embedUrl.includes("youtube.com/embed") || embedUrl.includes("vimeo.com/video"))) {
+
+      if (embedUrl) {
         mediaHtml = `
           <div class="ratio ratio-16x9">
-            <iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <iframe 
+              src="${embedUrl}" 
+              frameborder="0" 
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
+              allowfullscreen>
+            </iframe>
           </div>
         `;
       } else {
-        // If it's not a recognizable video URL, show a link instead
         mediaHtml = `
           <div class="bg-dark text-center py-4">
             <p class="text-white mb-1">Video Link:</p>

@@ -54,6 +54,36 @@ header {
   text-align: center;
   color: #fff;
 }
+/* Video container styling */
+.ratio-16x9 {
+  position: relative;
+  width: 100%;
+}
+
+.ratio-16x9::before {
+  content: "";
+  display: block;
+  padding-top: 56.25%; /* 16:9 aspect ratio */
+}
+
+.ratio-16x9 iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Card styling */
+.card {
+  border: 1px solid #333;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(255, 193, 7, 0.1);
+}
 
 /* ============================
    Cards
@@ -89,3 +119,4 @@ header {
 .contact-links a:hover {
   color: #ff9800;
 }
+

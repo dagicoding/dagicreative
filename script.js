@@ -1,3 +1,5 @@
+import { showTopToast } from './toast.js';
+
 // ============================
 // Firebase Setup
 // ============================
@@ -17,6 +19,24 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// ============================
+// Toast Helper Wrappers
+// ============================
+function notifySuccess(msg) {
+  showTopToast(msg, "success");
+}
+function notifyError(msg) {
+  showTopToast(msg, "error");
+}
+function notifyInfo(msg) {
+  showTopToast(msg, "info");
+}
+
+// Example usage (you can remove this later):
+// notifySuccess("Main page loaded!");
+// notifyError("Something went wrong");
+// notifyInfo("FYI: This is info");
 
 // ============================
 // Utility: toggle section
@@ -58,9 +78,46 @@ onSnapshot(doc(db, "hero", "main"), (docSnap) => {
 });
 
 // ============================
+// ============================
 // Works
 // ============================
 const worksContainer = document.querySelector(".works-container");
+
+// Helper function to convert video URLs to embed format
+function getEmbedUrl(url) {
+  if (!url) return null;
+
+  // YouTube short links
+  if (url.includes("youtu.be/")) {
+    const id = url.split("youtu.be/")[1].split('?')[0];
+    return `https://www.youtube.com/embed/${id}`;
+  }
+
+  // YouTube normal links
+  if (url.includes("youtube.com/watch")) {
+    const id = new URL(url).searchParams.get("v");
+    return id ? `https://www.youtube.com/embed/${id}` : url;
+  }
+
+  // YouTube embed links (already correct)
+  if (url.includes("youtube.com/embed")) {
+    return url;
+  }
+
+  // Vimeo
+  if (url.includes("vimeo.com/")) {
+    const id = url.split("vimeo.com/")[1].split('?')[0];
+    return `https://player.vimeo.com/video/${id}`;
+  }
+
+  // Vimeo player links (already correct)
+  if (url.includes("player.vimeo.com/video")) {
+    return url;
+  }
+
+  return url; // Return as-is if not a recognized video URL
+}
+
 onSnapshot(collection(db, "works"), (snapshot) => {
   worksContainer.innerHTML = "";
   if (snapshot.empty) {
@@ -71,13 +128,39 @@ onSnapshot(collection(db, "works"), (snapshot) => {
 
   snapshot.forEach((doc) => {
     const work = doc.data();
+    
+    let mediaHtml = "";
+    if (work.videoUrl) {
+      const embedUrl = getEmbedUrl(work.videoUrl);
+      
+      if (embedUrl && (embedUrl.includes("youtube.com/embed") || embedUrl.includes("vimeo.com/video"))) {
+        mediaHtml = `
+          <div class="ratio ratio-16x9">
+            <iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        `;
+      } else {
+        // If it's not a recognizable video URL, show a link instead
+        mediaHtml = `
+          <div class="bg-dark text-center py-4">
+            <p class="text-white mb-1">Video Link:</p>
+            <a href="${work.videoUrl}" target="_blank" class="text-warning">${work.videoUrl}</a>
+          </div>
+        `;
+      }
+    } else if (work.imageUrl) {
+      mediaHtml = `<img src="${work.imageUrl}" class="card-img-top" alt="${work.title}" style="height: 250px; object-fit: cover;">`;
+    } else {
+      mediaHtml = `<div class="bg-secondary text-center text-white py-5">No Media</div>`;
+    }
+
     worksContainer.innerHTML += `
-      <div class="col-md-4">
-        <div class="card">
-          <img src="${work.imageUrl || "placeholder.jpg"}" class="card-img-top">
+      <div class="col-md-4 mb-4">
+        <div class="card bg-dark text-white h-100">
+          ${mediaHtml}
           <div class="card-body">
-            <h5>${work.title}</h5>
-            <p>${work.description}</p>
+            <h5 class="card-title">${work.title}</h5>
+            <p class="card-text">${work.description}</p>
           </div>
         </div>
       </div>
@@ -141,19 +224,20 @@ onSnapshot(collection(db, "testimonials"), (snapshot) => {
 
 // ============================
 // Courses
+// ============================
 onSnapshot(collection(db, "courses"), (snapshot) => {
   const coursesContainer = document.querySelector(".courses-container");
   const coursesSection = document.getElementById("courses");
-  const heroSection = document.getElementById("home"); // 👈 hero section
+  const heroSection = document.getElementById("home");
 
   if (snapshot.empty) {
     coursesSection.classList.add("d-none");
-    heroSection.classList.remove("d-none"); // show hero if no courses
+    heroSection.classList.remove("d-none");
     return;
   }
 
   coursesSection.classList.remove("d-none");
-  heroSection.classList.add("d-none"); // 👈 hide hero when courses exist
+  heroSection.classList.add("d-none");
   coursesContainer.innerHTML = "";
 
   snapshot.forEach((docSnap) => {
@@ -166,26 +250,20 @@ onSnapshot(collection(db, "courses"), (snapshot) => {
           <p>${c.description}</p>
           <p><strong>Date:</strong> ${c.date} | <strong>Time:</strong> ${c.time}</p>
           <button class="btn btn-warning mt-2 w-100 register-btn" data-id="${docSnap.id}">
-          Register
+            Register
           </button>
-
         </div>
       </div>
     `;
   });
 
-// attach register button listeners
-document.querySelectorAll(".register-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    window.location.href = "register/register.html?id=" + btn.dataset.id;
+  // attach register button listeners
+  document.querySelectorAll(".register-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      window.location.href = "register/register.html?id=" + btn.dataset.id;
+    });
   });
 });
-
-
-
-});
-
-
 
 // ============================
 // Contact Section

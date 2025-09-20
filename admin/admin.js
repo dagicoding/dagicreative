@@ -81,29 +81,99 @@ function showToast(message, type = "success") {
 const worksList = document.getElementById("works-list");
 document.getElementById("workForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const title = document.getElementById("workTitle").value;
-  const description = document.getElementById("workDesc").value;
-  const imageUrl = document.getElementById("workImage").value || "";
+  const title = document.getElementById("workTitle").value.trim();
+  const description = document.getElementById("workDesc").value.trim();
+  const imageUrl = document.getElementById("workImage").value.trim() || "";
+  const videoUrl = document.getElementById("workVideo").value.trim() || "";
 
-  await addDoc(collection(db, "works"), { title, description, imageUrl, createdAt: new Date() });
+  // ✅ Validate video link
+  if (
+    videoUrl &&
+    !(videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") || videoUrl.includes("drive.google.com"))
+  ) {
+    showToast("Only YouTube or Google Drive links are allowed!", "error");
+    return;
+  }
+
+  await addDoc(collection(db, "works"), { 
+    title, 
+    description, 
+    imageUrl, 
+    videoUrl, 
+    createdAt: new Date() 
+  });
+
   showToast("Work added successfully!");
   e.target.reset();
 });
 
+// ✅ Helper: YouTube/Drive embed converter
+function getEmbedUrl(url) {
+  if (!url) return null;
+
+  if (url.includes("youtu.be/")) {
+    const id = url.split("youtu.be/")[1].split('?')[0];
+    return `https://www.youtube.com/embed/${id}`;
+  }
+  if (url.includes("youtube.com/watch")) {
+    const id = new URL(url).searchParams.get("v");
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  }
+  if (url.includes("youtube.com/embed")) return url;
+
+  if (url.includes("drive.google.com/file/d/")) {
+    const match = url.match(/\/file\/d\/([^/]+)\//);
+    if (match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+
+  return null;
+}
+
 onSnapshot(collection(db, "works"), (snapshot) => {
-  document.getElementById("worksCount").textContent = snapshot.size; // 🔥 Update count
+  document.getElementById("worksCount").textContent = snapshot.size;
   worksList.innerHTML = "";
+
   snapshot.forEach((docSnap) => {
     const work = docSnap.data();
+    const workId = docSnap.id;
+
+    let mediaHtml = "";
+    if (work.videoUrl) {
+      const embedUrl = getEmbedUrl(work.videoUrl);
+      if (embedUrl) {
+        mediaHtml = `
+          <div class="ratio ratio-16x9 mb-2">
+            <iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        `;
+      } else {
+        mediaHtml = `<a href="${work.videoUrl}" target="_blank" class="text-warning">Open Video</a>`;
+      }
+    } else if (work.imageUrl) {
+      mediaHtml = `<img src="${work.imageUrl}" class="card-img-top mb-2" alt="${work.title}" style="height:200px;object-fit:cover;">`;
+    } else {
+      mediaHtml = `<div class="bg-secondary text-center text-white py-5 mb-2">No Media</div>`;
+    }
+
+    const safeTitle = work.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const safeDescription = work.description.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const safeImageUrl = (work.imageUrl || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const safeVideoUrl = (work.videoUrl || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
     worksList.innerHTML += `
-      <div class="col-md-4">
-        <div class="card p-3 bg-dark text-white">
-          <img src="${work.imageUrl || 'placeholder.jpg'}" class="card-img-top mb-2">
-          <h5>${work.title}</h5>
-          <p>${work.description}</p>
-          <div class="d-flex justify-content-between">
-            <button class="btn btn-sm btn-primary" onclick="editWork('${docSnap.id}', '${work.title}', '${work.description}', '${work.imageUrl || ''}')"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-danger" onclick="deleteWork('${docSnap.id}')"><i class="bi bi-trash"></i></button>
+      <div class="col-md-4 mb-4">
+        <div class="card p-3 bg-dark text-white h-100">
+          ${mediaHtml}
+          <h5 class="mt-2">${work.title}</h5>
+          <p class="flex-grow-1">${work.description}</p>
+          <div class="d-flex justify-content-between mt-2">
+            <button class="btn btn-sm btn-primary" 
+              onclick="editWork('${workId}', '${safeTitle}', '${safeDescription}', '${safeImageUrl}', '${safeVideoUrl}')">
+              <i class="bi bi-pencil"></i> Edit
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="deleteWork('${workId}')">
+              <i class="bi bi-trash"></i> Delete
+            </button>
           </div>
         </div>
       </div>
@@ -112,31 +182,51 @@ onSnapshot(collection(db, "works"), (snapshot) => {
 });
 
 window.deleteWork = async function (id) {
-  if (confirm("Delete this work?")) {
+  if (confirm("Are you sure you want to delete this work?")) {
     await deleteDoc(doc(db, "works", id));
     showToast("Work deleted!", "success");
   }
 };
 
-window.editWork = function (id, title, description, imageUrl) {
-  document.getElementById("workTitle").value = title;
-  document.getElementById("workDesc").value = description;
-  document.getElementById("workImage").value = imageUrl;
+window.editWork = function (id, title, description, imageUrl, videoUrl) {
+  document.getElementById("workTitle").value = title.replace(/\\'/g, "'").replace(/&quot;/g, '"');
+  document.getElementById("workDesc").value = description.replace(/\\'/g, "'").replace(/&quot;/g, '"');
+  document.getElementById("workImage").value = imageUrl.replace(/\\'/g, "'").replace(/&quot;/g, '"');
+  document.getElementById("workVideo").value = videoUrl.replace(/\\'/g, "'").replace(/&quot;/g, '"');
+
   const form = document.getElementById("workForm");
   form.querySelector("button").innerHTML = `<i class="bi bi-save"></i> Save Changes`;
 
-  form.onsubmit = async (e) => {
+  const newForm = form.cloneNode(true);
+  form.parentNode.replaceChild(newForm, form);
+
+  newForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const updatedTitle = document.getElementById("workTitle").value.trim();
+    const updatedDesc = document.getElementById("workDesc").value.trim();
+    const updatedImage = document.getElementById("workImage").value.trim() || "";
+    const updatedVideo = document.getElementById("workVideo").value.trim() || "";
+
+    if (
+      updatedVideo &&
+      !(updatedVideo.includes("youtube.com") || updatedVideo.includes("youtu.be") || updatedVideo.includes("drive.google.com"))
+    ) {
+      showToast("Only YouTube or Google Drive links are allowed!", "error");
+      return;
+    }
+
     await updateDoc(doc(db, "works", id), {
-      title: document.getElementById("workTitle").value,
-      description: document.getElementById("workDesc").value,
-      imageUrl: document.getElementById("workImage").value
+      title: updatedTitle,
+      description: updatedDesc,
+      imageUrl: updatedImage,
+      videoUrl: updatedVideo,
+      updatedAt: new Date()
     });
+
     showToast("Work updated successfully!", "success");
-    form.reset();
-    form.querySelector("button").innerHTML = `➕ Add Work`;
-    form.onsubmit = null;
-  };
+    newForm.reset();
+    newForm.querySelector("button").innerHTML = `➕ Add Work`;
+  });
 };
 
 // ============================

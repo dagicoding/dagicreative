@@ -52,6 +52,12 @@
   <!-- 👇 Wrap menu items inside collapse -->
   <div class="collapse navbar-collapse" id="adminNavbar">
    <ul class="navbar-nav ms-auto">
+    <li class="nav-item">
+    <a class="nav-link active" href="#" onclick="showSection('hero')">
+  Hero 
+</a>
+
+  </li>
   <li class="nav-item">
     <a class="nav-link active" href="#" onclick="showSection('works')">
       Works <sup id="worksCount" class="badge bg-warning text-dark">0</sup>
@@ -121,26 +127,31 @@
 
 
 
-      <!-- Works Section -->
-      <section id="works" class="admin-section">
-        <h3 class="text-warning mb-3">Manage Works</h3>
-        <form id="workForm" class="mb-4">
-          <div class="mb-3">
-            <label for="workTitle" class="form-label">Work Title</label>
-            <input type="text" class="form-control" id="workTitle" placeholder="Enter work title" required>
-          </div>
-          <div class="mb-3">
-            <label for="workDesc" class="form-label">Description</label>
-            <textarea class="form-control" id="workDesc" placeholder="Enter short description" rows="3" required></textarea>
-          </div>
-          <div class="mb-3">
-            <label for="workImage" class="form-label">Image URL</label>
-            <input type="url" class="form-control" id="workImage" placeholder="Paste image link (e.g. https://...)" required>
-          </div>
-          <button type="submit" class="btn btn-warning w-100">➕ Add Work</button>
-        </form>
-        <div class="row" id="works-list"></div>
-      </section>
+     <!-- Works Section -->
+<section id="works" class="admin-section">
+  <h3 class="text-warning mb-3">Manage Works</h3>
+  <form id="workForm" class="mb-4">
+    <div class="mb-3">
+      <label for="workTitle" class="form-label">Work Title</label>
+      <input type="text" class="form-control" id="workTitle" placeholder="Enter work title" required>
+    </div>
+    <div class="mb-3">
+      <label for="workDesc" class="form-label">Description</label>
+      <textarea class="form-control" id="workDesc" placeholder="Enter short description" rows="3" required></textarea>
+    </div>
+    <div class="mb-3">
+      <label for="workImage" class="form-label">Image URL</label>
+      <input type="url" class="form-control" id="workImage" placeholder="Paste image link (e.g. https://...)">
+    </div>
+    <div class="mb-3">
+      <label for="workVideo" class="form-label">Video URL (YouTube or Vimeo)</label>
+      <input type="url" class="form-control" id="workVideo" placeholder="Paste video link (optional)">
+      <div class="form-text">Supports YouTube and Vimeo links</div>
+    </div>
+    <button type="submit" class="btn btn-warning w-100">➕ Add Work</button>
+  </form>
+  <div class="row" id="works-list"></div>
+</section>
 
       <!-- Packages Section -->
       <section id="packages" class="admin-section d-none">
@@ -207,7 +218,6 @@
     <div class="mb-3">
       <label for="courseImage" class="form-label">Image URL</label>
       <input type="url" class="form-control" id="courseImage" placeholder="Paste banner image link (optional)">
-    </div>
     <button type="submit" class="btn btn-warning w-100">➕ Add Course</button>
   </form>
   <div class="row" id="courses-list"></div>

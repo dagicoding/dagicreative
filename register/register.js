@@ -3,6 +3,8 @@ import {
   getFirestore, doc, getDoc, addDoc, collection, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
+import { showTopToast } from "../toast.js";  // 👈 adjust path if needed
+
 /* --- Firebase Config --- */
 const firebaseConfig = {
   apiKey: "AIzaSyBD4vqNox_tZz7p3Kr12x4eTDeuItQquM8",
@@ -109,15 +111,15 @@ registerForm.addEventListener("submit", async (e) => {
     await addDoc(collection(db, "registration"), {
       ...formData,
       courseId: courseId || null,
-      courseTitle: courseTitle || null, // ✅ save title
+      courseTitle: courseTitle || null,
       createdAt: serverTimestamp()
     });
 
-    alert("✅ Registration submitted successfully!");
+    showTopToast("✅ Registration submitted successfully!", "success"); // 🔔 popup
     registerForm.reset();
   } catch (err) {
     console.error("Registration failed:", err);
-    alert("❌ Failed to submit registration: " + err.message);
+    showTopToast("❌ Failed to submit registration: " + err.message, "error"); // 🔔 popup
   }
 });
 

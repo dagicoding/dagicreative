@@ -8,6 +8,8 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
+import { showTopToast } from "../toast.js"; // 👈 adjust path if needed
+
 /* --- Firebase Config --- */
 const firebaseConfig = {
   apiKey: "AIzaSyBD4vqNox_tZz7p3Kr12x4eTDeuItQquM8",
@@ -105,7 +107,7 @@ registrationsBody.addEventListener("click", async (e) => {
   if (delBtn) {
     if (confirm("⚠️ Delete this registration?")) {
       await deleteDoc(doc(db, "registration", delBtn.dataset.id));
-      alert("✅ Registration deleted!");
+      showTopToast("✅ Registration deleted!", "success"); // 🔔 popup
     }
   }
 });
@@ -123,7 +125,7 @@ editForm.addEventListener("submit", async (e) => {
   };
   await updateDoc(doc(db, "registration", id), updated);
   editModal.hide();
-  alert("✅ Registration updated!");
+  showTopToast("✅ Registration updated!", "success"); // 🔔 popup
 });
 
 /* --- Search --- */
@@ -137,7 +139,7 @@ searchInput.addEventListener("input", () => {
 /* --- Download CSV --- */
 downloadBtn.addEventListener("click", () => {
   if (registrationsCache.length === 0) {
-    alert("⚠️ No data to download.");
+    showTopToast("⚠️ No data to download.", "info"); // 🔔 popup
     return;
   }
 

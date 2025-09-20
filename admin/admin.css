@@ -1,0 +1,123 @@
+/* ============================
+   Global Styles
+============================ */
+body {
+  background: #000;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ============================
+   Login Page
+============================ */
+.card {
+  background: #111 !important;
+  color: #fff;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.8);
+}
+
+.card h3 {
+  font-weight: bold;
+}
+
+.form-control {
+  background: #222 !important;
+  border: 1px solid #444 !important;
+  color: #fff !important;
+  border-radius: 8px;
+}
+
+.form-control:focus {
+  border-color: #ff9800 !important;
+  box-shadow: 0 0 8px rgba(255,152,0,0.5) !important;
+}
+
+/* Login Button */
+.btn-warning {
+  background: #ff9800 !important;
+  border: none;
+  color: #000 !important;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: 0.3s;
+}
+
+.btn-warning:hover {
+  background: #e68900 !important;
+  color: #fff !important;
+}
+
+/* ============================
+   Dashboard
+============================ */
+#dashboard-section {
+  color: #fff;
+}
+
+/* Dashboard Nav Pills */
+.nav-pills .nav-link {
+  background: #111;
+  color: #fff;
+  margin-right: 5px;
+  border-radius: 8px;
+  transition: 0.3s;
+}
+
+.nav-pills .nav-link.active {
+  background: #ff9800;
+  color: #000;
+  font-weight: bold;
+}
+
+.nav-pills .nav-link:hover {
+  background: #333;
+}
+
+/* Dashboard Cards */
+#dashboard-section .card {
+  background: #111 !important;
+  border: 1px solid #333 !important;
+  border-radius: 12px !important;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* Dashboard Forms */
+#dashboard-section .form-control {
+  background: #222 !important;
+  border: 1px solid #444 !important;
+  color: #fff !important;
+  border-radius: 6px;
+}
+
+#dashboard-section .form-control:focus {
+  border-color: #ff9800 !important;
+  box-shadow: 0 0 8px rgba(255,152,0,0.5) !important;
+}
+
+/* Dashboard Buttons */
+#dashboard-section .btn-warning {
+  background: #ff9800 !important;
+  border: none;
+  color: #000 !important;
+  font-weight: bold;
+  border-radius: 6px;
+}
+
+#dashboard-section .btn-warning:hover {
+  background: #e68900 !important;
+  color: #fff !important;
+}
+
+/* Logout Button */
+#dashboard-section .btn-outline-danger {
+  border: 1px solid #ff4c4c;
+  color: #ff4c4c;
+}
+
+#dashboard-section .btn-outline-danger:hover {
+  background: #ff4c4c;
+  color: #fff;
+}

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dagi Creative Admin</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="admin.css">
+  <!-- SweetAlert2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-dark text-white">
+
+  <!-- ================== -->
+  <!-- Login Section -->
+  <!-- ================== -->
+  <section id="login-section" class="vh-100 d-flex align-items-center justify-content-center">
+    <div class="card shadow-lg p-4 bg-black text-white" style="max-width: 400px; width: 100%;">
+      <h2 class="text-center text-warning mb-4">Admin Login</h2>
+      <form onsubmit="login(); return false;">
+        <div class="mb-3">
+          <label for="loginEmail" class="form-label">Email</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="Enter your admin email" required>
+        </div>
+        <div class="mb-3">
+          <label for="loginPassword" class="form-label">Password</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-warning w-100">Login</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ================== -->
+  <!-- Dashboard Section -->
+  <!-- ================== -->
+  <section id="dashboard-section" class="d-none">
+   <!-- Top Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-black shadow-sm sticky-top px-3">
+  <a class="navbar-brand fw-bold text-warning" href="#">Dagi Admin</a>
+
+  <!-- 👇 Add this toggler for small screens -->
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <!-- 👇 Wrap menu items inside collapse -->
+  <div class="collapse navbar-collapse" id="adminNavbar">
+   <ul class="navbar-nav ms-auto">
+  <li class="nav-item">
+    <a class="nav-link active" href="#" onclick="showSection('works')">
+      Works <sup id="worksCount" class="badge bg-warning text-dark">0</sup>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="#" onclick="showSection('packages')">
+      Packages <sup id="packagesCount" class="badge bg-warning text-dark">0</sup>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="#" onclick="showSection('testimonials')">
+      Testimonials <sup id="testimonialsCount" class="badge bg-warning text-dark">0</sup>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="#" onclick="showSection('courses')">
+      Courses <sup id="coursesCount" class="badge bg-warning text-dark">0</sup>
+    </a>
+  </li>
+  <li class="nav-item">
+  <a class="nav-link" href="#" onclick="showSection('registration')">Registrations</a>
+
+</li>
+
+  <li class="nav-item">
+    <a class="nav-link" href="#" onclick="showSection('contact')">Contact</a>
+  </li>
+  <li class="nav-item">
+    <button onclick="logout()" class="btn btn-outline-light ms-3">Logout</button>
+  </li>
+</ul>
+
+
+  </div>
+</nav>
+
+
+    <!-- Container -->
+    <div class="container py-4">
+
+       <!-- Hero Section -->
+<section id="hero" class="admin-section">
+  <h3 class="text-warning mb-3">Manage Hero Section</h3>
+  <form id="heroForm" class="mb-4">
+    <div class="mb-3">
+      <label for="heroTitle" class="form-label">Hero Title</label>
+      <input type="text" class="form-control" id="heroTitle" placeholder="Welcome to My Website" required>
+    </div>
+    <div class="mb-3">
+      <label for="heroSubtitle" class="form-label">Subtitle</label>
+      <input type="text" class="form-control" id="heroSubtitle" placeholder="Your tagline or short intro" required>
+    </div>
+    <div class="mb-3">
+      <label for="heroBg" class="form-label">Background Image URL</label>
+      <input type="url" class="form-control" id="heroBg" placeholder="Paste background image URL (optional)">
+    </div>
+    <button type="submit" class="btn btn-warning w-100">💾 Save Hero</button>
+  </form>
+
+  <!-- 👇 Hero Preview -->
+  <div class="card bg-dark text-white text-center p-4" id="heroPreview" style="background-size: cover; background-position: center;">
+    <h1 id="heroPreviewTitle" class="fw-bold">Preview: Welcome to My Website</h1>
+    <p id="heroPreviewSubtitle">Preview: Your tagline or short intro goes here</p>
+  </div>
+</section>
+
+
+
+      <!-- Works Section -->
+      <section id="works" class="admin-section">
+        <h3 class="text-warning mb-3">Manage Works</h3>
+        <form id="workForm" class="mb-4">
+          <div class="mb-3">
+            <label for="workTitle" class="form-label">Work Title</label>
+            <input type="text" class="form-control" id="workTitle" placeholder="Enter work title" required>
+          </div>
+          <div class="mb-3">
+            <label for="workDesc" class="form-label">Description</label>
+            <textarea class="form-control" id="workDesc" placeholder="Enter short description" rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="workImage" class="form-label">Image URL</label>
+            <input type="url" class="form-control" id="workImage" placeholder="Paste image link (e.g. https://...)" required>
+          </div>
+          <button type="submit" class="btn btn-warning w-100">➕ Add Work</button>
+        </form>
+        <div class="row" id="works-list"></div>
+      </section>
+
+      <!-- Packages Section -->
+      <section id="packages" class="admin-section d-none">
+        <h3 class="text-warning mb-3">Manage Packages</h3>
+        <form id="packageForm" class="mb-4">
+          <div class="mb-3">
+            <label for="packageName" class="form-label">Package Name</label>
+            <input type="text" class="form-control" id="packageName" placeholder="e.g. Basic Package" required>
+          </div>
+          <div class="mb-3">
+            <label for="packagePrice" class="form-label">Price</label>
+            <input type="number" class="form-control" id="packagePrice" placeholder="e.g. 99" required>
+          </div>
+          <div class="mb-3">
+            <label for="packageFeatures" class="form-label">Features</label>
+            <textarea class="form-control" id="packageFeatures" placeholder="List features (comma separated)" rows="3" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-warning w-100">➕ Add Package</button>
+        </form>
+        <div class="row" id="packages-list"></div>
+      </section>
+
+      <!-- Testimonials Section -->
+      <section id="testimonials" class="admin-section d-none">
+        <h3 class="text-warning mb-3">Manage Testimonials</h3>
+        <form id="testimonialForm" class="mb-4">
+          <div class="mb-3">
+            <label for="testimonialName" class="form-label">Client Name</label>
+            <input type="text" class="form-control" id="testimonialName" placeholder="e.g. John Doe" required>
+          </div>
+          <div class="mb-3">
+            <label for="testimonialComment" class="form-label">Testimonial</label>
+            <textarea class="form-control" id="testimonialComment" placeholder="What did the client say?" rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="testimonialImage" class="form-label">Client Image URL</label>
+            <input type="url" class="form-control" id="testimonialImage" placeholder="Paste client photo link (optional)">
+          </div>
+          <button type="submit" class="btn btn-warning w-100">➕ Add Testimonial</button>
+        </form>
+        <div class="row" id="testimonials-list"></div>
+      </section>
+
+      <!-- Courses Section -->
+<section id="courses" class="admin-section d-none">
+  <h3 class="text-warning mb-3">Manage Courses</h3>
+  <form id="courseForm" class="mb-4">
+    <div class="mb-3">
+      <label for="courseTitle" class="form-label">Course Title</label>
+      <input type="text" class="form-control" id="courseTitle" placeholder="e.g. Web Design Basics" required>
+    </div>
+    <div class="mb-3">
+      <label for="courseDesc" class="form-label">Description</label>
+      <textarea class="form-control" id="courseDesc" placeholder="Short course description" rows="3" required></textarea>
+    </div>
+    <div class="mb-3">
+      <label for="courseDate" class="form-label">Date</label>
+      <input type="date" class="form-control" id="courseDate" required>
+    </div>
+    <div class="mb-3">
+      <label for="courseTime" class="form-label">Time</label>
+      <input type="text" class="form-control" id="courseTime" placeholder="e.g. 10:00 AM" required>
+    </div>
+    <div class="mb-3">
+      <label for="courseImage" class="form-label">Image URL</label>
+      <input type="url" class="form-control" id="courseImage" placeholder="Paste banner image link (optional)">
+    </div>
+    <button type="submit" class="btn btn-warning w-100">➕ Add Course</button>
+  </form>
+  <div class="row" id="courses-list"></div>
+</section>
+
+
+<!-- Registration Section -->
+ 
+
+<section id="registration" class="admin-section d-none">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-warning">Registration Form Control</h3>
+  <button id="viewRegistrationsBtn" class="btn btn-primary">
+  👥 View Registrations 
+  <span id="registrationsCount" class="badge bg-warning text-dark">0</span>
+</button>
+
+
+  </div>
+
+  <form id="registrationFieldsForm" class="bg-dark p-3 rounded">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="fieldName" checked>
+      <label class="form-check-label" for="fieldName">Name</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="fieldEmail">
+      <label class="form-check-label" for="fieldEmail">Email</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="fieldPhone" checked>
+      <label class="form-check-label" for="fieldPhone">Phone</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="fieldAddress">
+      <label class="form-check-label" for="fieldAddress">Address</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="fieldAge">
+      <label class="form-check-label" for="fieldAge">Age</label>
+    </div>
+    <button type="submit" class="btn btn-warning mt-3">💾 Save Form Settings</button>
+  </form>
+</section>
+
+
+
+      <!-- Contact Section -->
+      <section id="contact" class="admin-section d-none">
+        <h3 class="text-warning mb-3">Manage Contact Links</h3>
+        <form id="contactForm" class="mb-4">
+          <div class="mb-3">
+            <label for="contactFacebook" class="form-label">Facebook URL</label>
+            <input type="url" class="form-control" id="contactFacebook" placeholder="https://facebook.com/yourpage">
+          </div>
+          <div class="mb-3">
+            <label for="contactInstagram" class="form-label">Instagram URL</label>
+            <input type="url" class="form-control" id="contactInstagram" placeholder="https://instagram.com/yourprofile">
+          </div>
+          <div class="mb-3">
+            <label for="contactLinkedin" class="form-label">LinkedIn URL</label>
+            <input type="url" class="form-control" id="contactLinkedin" placeholder="https://linkedin.com/in/yourprofile">
+          </div>
+          <button type="submit" class="btn btn-warning w-100">💾 Save Contact Info</button>
+        </form>
+      </section>
+
+
+      
+    </div>
+  </section>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Firebase Admin Logic -->
+  <script type="module" src="admin.js"></script>
+
+  <!-- Small script to toggle sections -->
+  <script>
+    function showSection(sectionId) {
+      document.querySelectorAll('.admin-section').forEach(sec => sec.classList.add('d-none'));
+      document.getElementById(sectionId).classList.remove('d-none');
+
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      document.querySelector(`[onclick="showSection('${sectionId}')"]`).classList.add('active');
+    }
+  </script>
+
+  <!-- Toast container -->
+<div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 9999">
+  <div id="liveToast" class="toast align-items-center text-bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage"></div>
+      <button type="button" class="btn-close btn-close-white ms-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>

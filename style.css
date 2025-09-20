@@ -1,0 +1,91 @@
+/* ============================
+   Global Styles
+============================ */
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  background: #000;   /* full black background */
+  color: #fff;        /* white text */
+  margin: 0;
+  padding: 0;
+}
+
+/* Section container */
+.section {
+  background: #000;   /* keep sections black too */
+  padding: 60px 20px;
+  margin: 20px auto;
+  max-width: 1200px;
+  text-align: center;
+}
+
+/* Section titles */
+.section h2 {
+  font-size: 2rem;
+  margin-bottom: 30px;
+  color: #fff;   /* white titles */
+}
+
+/* ============================
+   Navbar
+============================ */
+header {
+  background: #000 !important;
+}
+
+.navbar .nav-link {
+  color: #fff !important;
+  transition: color 0.3s;
+}
+
+.navbar .nav-link:hover {
+  color: #ff9800 !important; /* small orange hover accent */
+}
+
+/* ============================
+   Hero Section
+============================ */
+.hero {
+  min-height: 90vh;
+  background: #000; /* plain black for now */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+}
+
+/* ============================
+   Cards
+============================ */
+.card {
+  background: #111;  /* slightly lighter than black */
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(255,255,255,0.05);
+  color: #fff;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(255,255,255,0.2);
+}
+
+/* Testimonials avatar */
+.testimonials-container .card img {
+  border: 2px solid #fff;
+}
+
+/* ============================
+   Contact
+============================ */
+.contact-links a {
+  color: #fff;
+  font-size: 1.5rem;
+  transition: color 0.3s;
+}
+
+.contact-links a:hover {
+  color: #ff9800;
+}

@@ -29,7 +29,7 @@ const registerForm = document.getElementById("dynamicRegisterForm");
 
 /* --- Load Registration Fields Dynamically --- */
 async function loadRegistrationFields() {
-  const docRef = doc(db, "registration", "fields");
+  const docRef = doc(db, "registration", "fields"); // ✅ admin-defined global fields
   const docSnap = await getDoc(docRef);
 
   formFieldsContainer.innerHTML = ""; // clear old content first
@@ -94,32 +94,36 @@ registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   try {
+    if (!courseId) {
+      throw new Error("Missing course ID. Registration must be linked to a course.");
+    }
+
     const formData = {};
     new FormData(registerForm).forEach((value, key) => {
       formData[key] = value;
     });
 
+    // ✅ Fetch course title for context
     let courseTitle = "";
-    if (courseId) {
-      const courseRef = doc(db, "courses", courseId);
-      const courseSnap = await getDoc(courseRef);
-      if (courseSnap.exists()) {
-        courseTitle = courseSnap.data().title || "";
-      }
+    const courseRef = doc(db, "courses", courseId);
+    const courseSnap = await getDoc(courseRef);
+    if (courseSnap.exists()) {
+      courseTitle = courseSnap.data().title || "";
     }
 
-    await addDoc(collection(db, "registration"), {
+    // ✅ Save under courses/{courseId}/registrations
+    await addDoc(collection(db, "courses", courseId, "registrations"), {
       ...formData,
-      courseId: courseId || null,
-      courseTitle: courseTitle || null,
+      courseId,
+      courseTitle,
       createdAt: serverTimestamp()
     });
 
-    showTopToast("✅ Registration submitted successfully!", "success"); // 🔔 popup
+    showTopToast("✅ Registration submitted successfully!", "success");
     registerForm.reset();
   } catch (err) {
     console.error("Registration failed:", err);
-    showTopToast("❌ Failed to submit registration: " + err.message, "error"); // 🔔 popup
+    showTopToast("❌ Failed to submit registration: " + err.message, "error");
   }
 });
 

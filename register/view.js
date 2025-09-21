@@ -1,14 +1,15 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {
   getFirestore,
-  collection,
+  collectionGroup,
   onSnapshot,
   deleteDoc,
   doc,
-  updateDoc
+  updateDoc,
+  writeBatch,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
-
-import { showTopToast } from "../toast.js"; // 👈 adjust path if needed
+import { showTopToast } from "../toast.js"; // adjust path if needed
 
 /* --- Firebase Config --- */
 const firebaseConfig = {
@@ -38,6 +39,8 @@ function formatTimestamp(ts) {
 const registrationsBody = document.getElementById("registrationsBody");
 const searchInput = document.getElementById("searchInput");
 const downloadBtn = document.getElementById("downloadBtn");
+const selectAllCheckbox = document.getElementById("selectAll");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 
 // Modal form elements
 const editModalEl = document.getElementById("editModal");
@@ -51,20 +54,63 @@ const editModal = new bootstrap.Modal(editModalEl);
 
 /* --- State --- */
 let registrationsCache = [];
+let courseCache = {}; // cache courseId -> courseTitle
+
+/* --- Helper: Fetch Course Title --- */
+async function getCourseTitle(courseId) {
+  if (!courseId) return "-";
+  if (courseCache[courseId]) return courseCache[courseId]; // use cached
+  try {
+    const snap = await getDoc(doc(db, "courses", courseId));
+    if (snap.exists()) {
+      const title = snap.data().title || courseId;
+      courseCache[courseId] = title;
+      return title;
+    }
+  } catch (e) {
+    console.error("Course lookup failed:", e);
+  }
+  return courseId; // fallback
+}
 
 /* --- Firestore Listener --- */
-onSnapshot(collection(db, "registration"), (snapshot) => {
+onSnapshot(
+  collectionGroup(db, "registrations"),
+  async (snapshot) => {
+    const temp = [];
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      const courseId = docSnap.ref.parent.parent.id;
+      const courseTitle = await getCourseTitle(courseId);
+
+      temp.push({
+        id: docSnap.id,
+        courseId,
+        courseTitle,
+        ...data
+      });
+    }
+
+    // Sort by createdAt (newest first)
+    temp.sort((a, b) => {
+      const timeA = a.createdAt?.toDate?.()?.getTime?.() || 0;
+      const timeB = b.createdAt?.toDate?.()?.getTime?.() || 0;
+      return timeB - timeA;
+    });
+
+    registrationsCache = temp;
+    renderRegistrations(registrationsCache);
+  },
+  (error) => console.error("Snapshot error:", error)
+);
+
+/* --- Render Registrations --- */
+function renderRegistrations(registrations) {
   registrationsBody.innerHTML = "";
-  registrationsCache = [];
-
-  snapshot.forEach((docSnap) => {
-    if (docSnap.id === "fields") return; // skip config doc
-
-    const r = docSnap.data();
-    registrationsCache.push({ id: docSnap.id, ...r });
-
+  registrations.forEach((r) => {
     registrationsBody.innerHTML += `
       <tr>
+        <td class="checkbox-col"><input type="checkbox" class="select-row" data-id="${r.id}" data-course="${r.courseId}"></td>
         <td>${r.name || "-"}</td>
         <td>${r.email || "-"}</td>
         <td>${r.phone || "-"}</td>
@@ -72,21 +118,24 @@ onSnapshot(collection(db, "registration"), (snapshot) => {
         <td>${formatTimestamp(r.createdAt)}</td>
         <td>
           <button class="btn btn-sm btn-warning edit-btn" 
-            data-id="${docSnap.id}" 
+            data-id="${r.id}" 
+            data-courseid="${r.courseId}"
             data-name="${r.name || ""}" 
             data-email="${r.email || ""}" 
             data-phone="${r.phone || ""}" 
             data-course="${r.courseTitle || ""}">
             ✏️ Edit
           </button>
-          <button class="btn btn-sm btn-danger delete-btn" data-id="${docSnap.id}">
+          <button class="btn btn-sm btn-danger delete-btn" data-id="${r.id}" data-courseid="${r.courseId}">
             🗑️ Delete
           </button>
         </td>
       </tr>
     `;
   });
-});
+
+  selectAllCheckbox.checked = false;
+}
 
 /* --- Event Delegation for Edit/Delete --- */
 registrationsBody.addEventListener("click", async (e) => {
@@ -96,6 +145,7 @@ registrationsBody.addEventListener("click", async (e) => {
   // Edit button clicked
   if (editBtn) {
     editIdEl.value = editBtn.dataset.id;
+    editIdEl.dataset.courseid = editBtn.dataset.courseid; // save course ID
     editName.value = editBtn.dataset.name;
     editEmail.value = editBtn.dataset.email;
     editPhone.value = editBtn.dataset.phone;
@@ -106,8 +156,8 @@ registrationsBody.addEventListener("click", async (e) => {
   // Delete button clicked
   if (delBtn) {
     if (confirm("⚠️ Delete this registration?")) {
-      await deleteDoc(doc(db, "registration", delBtn.dataset.id));
-      showTopToast("✅ Registration deleted!", "success"); // 🔔 popup
+      await deleteDoc(doc(db, "courses", delBtn.dataset.courseid, "registrations", delBtn.dataset.id));
+      showTopToast("✅ Registration deleted!", "success");
     }
   }
 });
@@ -116,38 +166,66 @@ registrationsBody.addEventListener("click", async (e) => {
 editForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = editIdEl.value;
+  const courseId = editIdEl.dataset.courseid;
   const updated = {
     name: editName.value.trim(),
     email: editEmail.value.trim(),
     phone: editPhone.value.trim(),
-    courseTitle: editCourse.value.trim(),
+    course: editCourse.value.trim(),
     updatedAt: new Date()
   };
-  await updateDoc(doc(db, "registration", id), updated);
+  await updateDoc(doc(db, "courses", courseId, "registrations", id), updated);
   editModal.hide();
-  showTopToast("✅ Registration updated!", "success"); // 🔔 popup
+  showTopToast("✅ Registration updated!", "success");
 });
 
 /* --- Search --- */
 searchInput.addEventListener("input", () => {
-  const q = searchInput.value.toLowerCase();
-  Array.from(registrationsBody.querySelectorAll("tr")).forEach((row) => {
-    row.style.display = row.innerText.toLowerCase().includes(q) ? "" : "none";
+  const q = searchInput.value.toLowerCase().trim();
+  const filtered = registrationsCache.filter((r) =>
+    [r.name, r.email, r.phone, r.courseTitle, r.courseId, formatTimestamp(r.createdAt)]
+      .some((field) => field?.toLowerCase().includes(q))
+  );
+  renderRegistrations(filtered);
+});
+
+/* --- Select All Checkbox --- */
+selectAllCheckbox.addEventListener("change", () => {
+  const checkboxes = registrationsBody.querySelectorAll(".select-row");
+  checkboxes.forEach((checkbox) => {
+    checkbox.checked = selectAllCheckbox.checked;
   });
+});
+
+/* --- Delete Selected --- */
+deleteSelectedBtn.addEventListener("click", async () => {
+  const selectedCheckboxes = registrationsBody.querySelectorAll(".select-row:checked");
+  if (selectedCheckboxes.length === 0) {
+    showTopToast("⚠️ No registrations selected.", "info");
+    return;
+  }
+  if (confirm(`⚠️ Delete ${selectedCheckboxes.length} selected registration(s)?`)) {
+    const batch = writeBatch(db);
+    selectedCheckboxes.forEach((checkbox) => {
+      const docRef = doc(db, "courses", checkbox.dataset.course, "registrations", checkbox.dataset.id);
+      batch.delete(docRef);
+    });
+    await batch.commit();
+    showTopToast(`✅ ${selectedCheckboxes.length} registration(s) deleted!`, "success");
+    selectAllCheckbox.checked = false; // Reset select all
+  }
 });
 
 /* --- Download CSV --- */
 downloadBtn.addEventListener("click", () => {
   if (registrationsCache.length === 0) {
-    showTopToast("⚠️ No data to download.", "info"); // 🔔 popup
+    showTopToast("⚠️ No data to download.", "info");
     return;
   }
-
   let csv = "Name,Email,Phone,Course,Date\n";
-  registrationsCache.forEach(r => {
-    csv += `"${r.name || "-"}","${r.email || "-"}","${r.phone || "-"}","${r.courseTitle || r.courseId || "-"}","${formatTimestamp(r.createdAt)}"\n`;
+  registrationsCache.forEach((r) => {
+    csv += `"${r.name || "-"}","${r.email || "-"}","${r.phone || "-"}","${r.courseTitle || "-"}","${formatTimestamp(r.createdAt)}"\n`;
   });
-
   const blob = new Blob([csv], { type: "text/csv" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);

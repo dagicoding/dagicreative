@@ -33,11 +33,6 @@ function notifyInfo(msg) {
   showTopToast(msg, "info");
 }
 
-// Example usage (you can remove this later):
-// notifySuccess("Main page loaded!");
-// notifyError("Something went wrong");
-// notifyInfo("FYI: This is info");
-
 // ============================
 // Utility: toggle section
 // ============================
@@ -125,7 +120,6 @@ function getEmbedUrl(url) {
 
   return null; // not recognized
 }
-
 
 onSnapshot(collection(db, "works"), (snapshot) => {
   worksContainer.innerHTML = "";
@@ -236,16 +230,119 @@ onSnapshot(collection(db, "testimonials"), (snapshot) => {
 });
 
 // ============================
-// Courses
 // ============================
+// Courses with improved countdown timers
+// ============================
+const countdownTimers = {}; // Object to track all active countdown timers
+
+// Clear all countdown intervals
+function clearAllCountdownTimers() {
+  for (let id in countdownTimers) {
+    clearInterval(countdownTimers[id]);
+    delete countdownTimers[id];
+  }
+}
+
+// Start a countdown timer for a specific course
+function startCountdown(countdownId, dateTimeStr, btnId) {
+  const el = document.getElementById(countdownId);
+  const btn = btnId ? document.getElementById(btnId) : null;
+
+  if (!el) {
+    console.warn(`Element with ID ${countdownId} not found`);
+    return;
+  }
+
+  // Clear any existing timer for this element
+  if (countdownTimers[countdownId]) {
+    clearInterval(countdownTimers[countdownId]);
+    delete countdownTimers[countdownId];
+  }
+
+  if (!dateTimeStr || dateTimeStr.trim() === "") {
+    el.textContent = "Date not set";
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.remove("btn-warning");
+      btn.classList.add("btn-secondary");
+    }
+    return;
+  }
+
+  const target = new Date(dateTimeStr).getTime();
+  if (isNaN(target)) {
+    el.textContent = "Invalid date";
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.remove("btn-warning");
+      btn.classList.add("btn-secondary");
+    }
+    return;
+  }
+
+  function update() {
+    const now = Date.now();
+    const diff = target - now;
+
+    if (diff <= 0) {
+      el.textContent = "Registration closed";
+      el.classList.remove("text-warning");
+      el.classList.add("text-danger");
+
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.remove("btn-warning");
+        btn.classList.add("btn-secondary");
+        btn.textContent = "Closed";
+      }
+
+      // Clear the timer when countdown is complete
+      if (countdownTimers[countdownId]) {
+        clearInterval(countdownTimers[countdownId]);
+        delete countdownTimers[countdownId];
+      }
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+    el.textContent = `${days}d ${hours}h ${mins}m ${secs}s`;
+    
+    // Ensure button is enabled if countdown is active
+    if (btn && btn.disabled && diff > 0) {
+      btn.disabled = false;
+      btn.classList.remove("btn-secondary");
+      btn.classList.add("btn-warning");
+      btn.textContent = "Register";
+    }
+  }
+
+  // Initial update
+  update();
+  
+  // Set interval and store the timer ID
+  countdownTimers[countdownId] = setInterval(update, 1000);
+}
+
+// Courses snapshot listener
 onSnapshot(collection(db, "courses"), (snapshot) => {
+  // Clear all existing timers before rendering new ones
+  clearAllCountdownTimers();
+  
   const coursesContainer = document.querySelector(".courses-container");
   const coursesSection = document.getElementById("courses");
   const heroSection = document.getElementById("home");
 
   if (snapshot.empty) {
     coursesSection.classList.add("d-none");
-    heroSection.classList.remove("d-none");
+    if (heroData) {
+      heroSection.classList.remove("d-none");
+      showHero(heroData);
+    }
+    coursesContainer.innerHTML = "";
     return;
   }
 
@@ -255,14 +352,20 @@ onSnapshot(collection(db, "courses"), (snapshot) => {
 
   snapshot.forEach((docSnap) => {
     const c = docSnap.data();
+    const id = docSnap.id;
+    const countdownId = `countdown-${id}`;
+    const btnId = `register-btn-${id}`;
+    const courseDateTime = `${c.date || ""} ${c.time || ""}`;
+
     coursesContainer.innerHTML += `
-      <div class="col-md-4">
+      <div class="col-md-4 mb-4">
         <div class="card bg-dark text-white p-3 h-100">
-          <img src="${c.imageUrl || 'placeholder.jpg'}" class="card-img-top mb-2" alt="${c.title}">
+          <img src="${c.imageUrl || 'placeholder.jpg'}" class="card-img-top mb-2" alt="${c.title}" style="height: 200px; object-fit: cover;">
           <h5>${c.title}</h5>
           <p>${c.description}</p>
-          <p><strong>Date:</strong> ${c.date} | <strong>Time:</strong> ${c.time}</p>
-          <button class="btn btn-warning mt-2 w-100 register-btn" data-id="${docSnap.id}">
+          <p><strong>Date:</strong> ${c.date || "Not set"} | <strong>Time:</strong> ${c.time || "Not set"}</p>
+          <p id="${countdownId}" class="fw-bold text-warning"></p>
+          <button id="${btnId}" class="btn btn-warning mt-2 w-100 register-btn" data-id="${id}">
             Register
           </button>
         </div>
@@ -270,10 +373,25 @@ onSnapshot(collection(db, "courses"), (snapshot) => {
     `;
   });
 
-  // attach register button listeners
-  document.querySelectorAll(".register-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      window.location.href = "register/register.html?id=" + btn.dataset.id;
+  // Ensure DOM is updated before starting timers
+  requestAnimationFrame(() => {
+    snapshot.forEach((docSnap) => {
+      const c = docSnap.data();
+      const id = docSnap.id;
+      const countdownId = `countdown-${id}`;
+      const btnId = `register-btn-${id}`;
+      const courseDateTime = `${c.date || ""} ${c.time || ""}`;
+      
+      startCountdown(countdownId, courseDateTime, btnId);
+    });
+
+    // Attach register button listeners
+    document.querySelectorAll(".register-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (!btn.disabled) {
+          window.location.href = "register/register.html?id=" + btn.dataset.id;
+        }
+      });
     });
   });
 });
@@ -295,4 +413,9 @@ onSnapshot(doc(db, "contact", "socials"), (docSnap) => {
     ${contact.instagram ? `<a href="${contact.instagram}" target="_blank"><i class="bi bi-instagram"></i></a>` : ""}
     ${contact.linkedin ? `<a href="${contact.linkedin}" target="_blank"><i class="bi bi-linkedin"></i></a>` : ""}
   `;
+});
+
+// Clean up when the page is unloaded
+window.addEventListener('beforeunload', () => {
+  clearAllCountdownTimers();
 });

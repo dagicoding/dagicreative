@@ -24,6 +24,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+
+
+
+
 // ============================
 // Auth Handling
 // ============================
@@ -392,69 +396,162 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
   showToast("Contact info updated successfully!", "success");
 });
 
+
 // ============================
-// Courses
+// ============================
+// Courses with improved countdown timers
 // ============================
 const coursesList = document.getElementById("courses-list");
 const courseForm = document.getElementById("courseForm");
 let editCourseId = null;
+const countdownTimers = {}; // Object to track all active countdown timers
 
-// Add or update a course
+// Submit handler for add / update
 courseForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const title = document.getElementById("courseTitle").value.trim();
   const description = document.getElementById("courseDesc").value.trim();
   const date = document.getElementById("courseDate").value;
   const time = document.getElementById("courseTime").value.trim();
   const imageUrl = document.getElementById("courseImage").value.trim() || "";
 
-  if (editCourseId) {
-    // update
-    await updateDoc(doc(db, "courses", editCourseId), {
-      title, description, date, time, imageUrl, updatedAt: new Date()
-    });
-    showToast("Course updated successfully!", "success");
-    editCourseId = null;
-    courseForm.querySelector("button").textContent = "➕ Add Course";
-  } else {
-    // add new
-    await addDoc(collection(db, "courses"), {
-      title, description, date, time, imageUrl, createdAt: new Date()
-    });
-    showToast("Course added successfully!", "success");
+  try {
+    if (editCourseId) {
+      // Update existing course
+      await updateDoc(doc(db, "courses", editCourseId), {
+        title,
+        description,
+        date,
+        time,
+        imageUrl,
+        updatedAt: new Date(),
+      });
+      showToast("Course updated successfully!", "success");
+      editCourseId = null;
+      // Reset button label
+      const submitBtn = courseForm.querySelector("button[type='submit']");
+      if (submitBtn) submitBtn.innerHTML = "➕ Add Course";
+    } else {
+      // Add new course
+      await addDoc(collection(db, "courses"), {
+        title,
+        description,
+        date,
+        time,
+        imageUrl,
+        createdAt: new Date(),
+      });
+      showToast("Course added successfully!", "success");
+    }
+  } catch (err) {
+    showToast("Error: " + err.message, "error");
+    console.error(err);
   }
 
   courseForm.reset();
 });
-//Courses
-// Realtime listener
+
+// Clear all existing countdown timers
+function clearAllCountdownTimers() {
+  for (const timerId in countdownTimers) {
+    clearInterval(countdownTimers[timerId]);
+    delete countdownTimers[timerId];
+  }
+}
+
+// Start a countdown timer for a specific course
+function startCountdown(countdownId, dateTimeStr) {
+  const el = document.getElementById(countdownId);
+  if (!el) {
+    console.warn(`Element with ID ${countdownId} not found`);
+    return;
+  }
+
+  // Clear any existing timer for this element
+  if (countdownTimers[countdownId]) {
+    clearInterval(countdownTimers[countdownId]);
+    delete countdownTimers[countdownId];
+  }
+
+  if (!dateTimeStr || dateTimeStr.trim() === "") {
+    el.textContent = "Date not set";
+    return;
+  }
+
+  const target = new Date(dateTimeStr).getTime();
+  if (isNaN(target)) {
+    el.textContent = "Invalid date";
+    return;
+  }
+
+  function update() {
+    const now = Date.now();
+    const diff = target - now;
+
+    if (diff <= 0) {
+      el.textContent = "Registration closed";
+      el.classList.remove("text-warning");
+      el.classList.add("text-danger");
+      // Clear the timer when countdown is complete
+      if (countdownTimers[countdownId]) {
+        clearInterval(countdownTimers[countdownId]);
+        delete countdownTimers[countdownId];
+      }
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+    el.textContent = `${days}d ${hours}h ${mins}m ${secs}s`;
+  }
+
+  // Initial update
+  update();
+
+  // Set interval and store the timer ID
+  countdownTimers[countdownId] = setInterval(update, 1000);
+}
+
+// Realtime render and attach handlers
 onSnapshot(collection(db, "courses"), (snapshot) => {
-  document.getElementById("coursesCount").textContent = snapshot.size; // 🔥 Update count
+  // Clear all existing timers before rendering new ones
+  clearAllCountdownTimers();
+
+  // Update courses count
+  document.getElementById("coursesCount").textContent = snapshot.size;
   coursesList.innerHTML = "";
 
+  // Render all courses
   snapshot.forEach((docSnap) => {
     const c = docSnap.data();
     const id = docSnap.id;
+    const countdownId = `countdown-${id}`;
+    const courseDateTime = `${c.date || ""} ${c.time || ""}`;
 
     coursesList.innerHTML += `
       <div class="col-md-4">
         <div class="card bg-dark text-white p-3 h-100">
-          <img src="${c.imageUrl || 'placeholder.jpg'}" class="card-img-top mb-2" alt="${c.title}">
+          <img src="${c.imageUrl || 'placeholder.jpg'}" class="card-img-top mb-2" alt="${c.title}" style="height: 200px; object-fit: cover;">
           <h5>${c.title}</h5>
           <p>${c.description}</p>
-          <p><strong>Date:</strong> ${c.date} | <strong>Time:</strong> ${c.time}</p>
+          <p><strong>Date:</strong> ${c.date || "-"} | <strong>Time:</strong> ${c.time || "-"}</p>
+          <p id="${countdownId}" class="fw-bold text-warning"></p>
           <div class="d-flex justify-content-between">
-            <button class="btn btn-sm btn-primary edit-course-btn"
+            <button type="button" class="btn btn-sm btn-primary edit-course-btn"
               data-id="${id}"
-              data-title="${c.title.replace(/"/g, '&quot;')}"
-              data-description="${c.description.replace(/"/g, '&quot;')}"
-              data-date="${c.date}"
-              data-time="${c.time}"
-              data-image="${c.imageUrl || ''}">
-              <i class="bi bi-pencil"></i>
+              data-title="${(c.title || "").replace(/"/g, "&quot;")}"
+              data-description="${(c.description || "").replace(/"/g, "&quot;")}"
+              data-date="${c.date || ''}"
+              data-time="${c.time || ''}"
+              data-image="${(c.imageUrl || "").replace(/"/g, "&quot;")}">
+              <i class="bi bi-pencil"></i> Edit
             </button>
-            <button class="btn btn-sm btn-danger delete-course-btn" data-id="${id}">
-              <i class="bi bi-trash"></i>
+            <button type="button" class="btn btn-sm btn-danger delete-course-btn" data-id="${id}">
+              <i class="bi bi-trash"></i> Delete
             </button>
           </div>
         </div>
@@ -462,30 +559,59 @@ onSnapshot(collection(db, "courses"), (snapshot) => {
     `;
   });
 
-  // Attach edit listeners
-  document.querySelectorAll(".edit-course-btn").forEach(btn => {
-    btn.onclick = () => {
-      document.getElementById("courseTitle").value = btn.dataset.title;
-      document.getElementById("courseDesc").value = btn.dataset.description;
-      document.getElementById("courseDate").value = btn.dataset.date;
-      document.getElementById("courseTime").value = btn.dataset.time;
-      document.getElementById("courseImage").value = btn.dataset.image;
-      editCourseId = btn.dataset.id;
-      courseForm.querySelector("button").innerHTML = `<i class="bi bi-save"></i> Save Changes`;
-    };
-  });
+  // Ensure DOM is updated before starting timers
+  requestAnimationFrame(() => {
+    snapshot.forEach((docSnap) => {
+      const c = docSnap.data();
+      const id = docSnap.id;
+      const countdownId = `countdown-${id}`;
+      const courseDateTime = `${c.date || ""} ${c.time || ""}`;
+      startCountdown(countdownId, courseDateTime);
+    });
 
-  // Attach delete listeners
-  document.querySelectorAll(".delete-course-btn").forEach(btn => {
-    btn.onclick = async () => {
-      if (confirm("Delete this course?")) {
-        await deleteDoc(doc(db, "courses", btn.dataset.id));
-        showToast("Course deleted!", "success");
-      }
-    };
+    // Attach event listeners for edit/delete buttons
+    document.querySelectorAll(".edit-course-btn").forEach((btn) => {
+      // Remove existing listeners to prevent duplicates
+      btn.removeEventListener("click", handleEditCourse);
+      btn.addEventListener("click", handleEditCourse);
+    });
+
+    document.querySelectorAll(".delete-course-btn").forEach((btn) => {
+      // Remove existing listeners to prevent duplicates
+      btn.removeEventListener("click", handleDeleteCourse);
+      btn.addEventListener("click", handleDeleteCourse);
+    });
   });
 });
 
+// Separate edit course handler to prevent duplicate listeners
+function handleEditCourse(event) {
+  const btn = event.currentTarget;
+  document.getElementById("courseTitle").value = btn.dataset.title;
+  document.getElementById("courseDesc").value = btn.dataset.description;
+  document.getElementById("courseDate").value = btn.dataset.date;
+  document.getElementById("courseTime").value = btn.dataset.time;
+  document.getElementById("courseImage").value = btn.dataset.image;
+  editCourseId = btn.dataset.id;
+  const submitBtn = courseForm.querySelector("button[type='submit']");
+  if (submitBtn) submitBtn.innerHTML = `<i class="bi bi-save"></i> Save Changes`;
+  courseForm.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// Separate delete course handler to prevent duplicate listeners
+function handleDeleteCourse(event) {
+  const btn = event.currentTarget;
+  if (confirm("Delete this course?")) {
+    const countdownId = `countdown-${btn.dataset.id}`;
+    if (countdownTimers[countdownId]) {
+      clearInterval(countdownTimers[countdownId]);
+      delete countdownTimers[countdownId];
+    }
+    deleteDoc(doc(db, "courses", btn.dataset.id))
+      .then(() => showToast("Course deleted!", "success"))
+      .catch((err) => showToast("Error deleting course: " + err.message, "error"));
+  }
+}
 
 // ============================
 // Hero
@@ -538,22 +664,25 @@ if (viewBtn) {
 
 function loadRegistrations() {
   registrationsBody.innerHTML = "";
-  onSnapshot(collection(db, "registrations"), (snapshot) => {
+  onSnapshot(collectionGroup(db, "registrations"), (snapshot) => {
     registrationsBody.innerHTML = "";
     snapshot.forEach((docSnap) => {
       const r = docSnap.data();
+      const courseId = docSnap.ref.parent.parent.id; // ✅ parent course id
+
       registrationsBody.innerHTML += `
         <tr>
           <td>${r.name || "-"}</td>
           <td>${r.email || "-"}</td>
           <td>${r.phone || "-"}</td>
-          <td>${r.courseTitle || "-"}</td>
+          <td>${r.courseTitle || courseId || "-"}</td>
           <td>${r.createdAt ? new Date(r.createdAt.seconds * 1000).toLocaleString() : "-"}</td>
         </tr>
       `;
     });
   });
 }
+
 
 // Download CSV
 if (downloadBtn) {
@@ -605,10 +734,13 @@ registrationForm.addEventListener("submit", async (e) => {
 const viewRegistrationsBtn = document.getElementById("viewRegistrationsBtn");
 const registrationsCount = document.getElementById("registrationsCount");
 
-// Live update count
-onSnapshot(collection(db, "registration"), (snapshot) => {
+import { collectionGroup } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+// Live update count from ALL courses
+onSnapshot(collectionGroup(db, "registrations"), (snapshot) => {
   registrationsCount.textContent = snapshot.size;
 });
+
 
 // Redirect to view.html when clicked
 if (viewRegistrationsBtn) {
@@ -639,13 +771,4 @@ onSnapshot(doc(db, "registration", "fields"), (docSnap) => {
 });
 
 
-onSnapshot(collection(db, "registration"), (snapshot) => {
-  let validCount = 0;
-  snapshot.forEach((docSnap) => {
-    if (docSnap.id !== "fields") { // 🚀 exclude "fields" doc
-      validCount++;
-    }
-  });
-  registrationsCount.textContent = validCount;
-});
 
